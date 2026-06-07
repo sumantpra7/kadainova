@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --secondary: #ec4899;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --bg: #f9fafb;
+      --text: #1f2937;
+      --container-bg: white;
+      --chat-bg: #f3f4f6;
+      --bot-msg-bg: white;
+      --input-border: #d1d5db;
+      --badge-bg: linear-gradient(135deg, #e0e7ff, #f0f4ff);
+      --badge-color: #4f46e5;
+      --body-bg: linear-gradient(135deg, #f0f4ff, #fef9ff);
+      --shadow: rgba(0, 0, 0, 0.08);
+      --font-heading: 'Inter', system-ui, sans-serif;
+    }
+
+    body.dark-mode {
+      --primary: #0ff;
+      --secondary: #f0f;
+      --accent: #39ff14;
+      --danger: #ff3131;
+      --bg: #0a0a1a;
+      --text: #e0e0ff;
+      --container-bg: rgba(10, 10, 30, 0.85);
+      --chat-bg: rgba(0, 255, 255, 0.04);
+      --bot-msg-bg: rgba(0, 255, 255, 0.08);
+      --input-border: rgba(0, 255, 255, 0.3);
+      --badge-bg: linear-gradient(135deg, rgba(0,255,255,0.15), rgba(255,0,255,0.1));
+      --badge-color: #0ff;
+      --body-bg: radial-gradient(ellipse at 20% 50%, rgba(0,255,255,0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 20%, rgba(255,0,255,0.08) 0%, transparent 50%),
+                  #0a0a1a;
+      --shadow: rgba(0, 255, 255, 0.15);
+      --font-heading: 'Orbitron', 'Inter', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--body-bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+      transition: background 0.5s, color 0.4s;
+    }
+
+    .toolbar {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+    .toolbar button {
+      background: var(--container-bg);
+      border: 1.5px solid var(--input-border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toolbar button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 14px var(--shadow);
+    }
+    body.dark-mode .toolbar button {
+      border-color: rgba(0,255,255,0.35);
+      box-shadow: 0 0 8px rgba(0,255,255,0.1);
+    }
+    body.dark-mode .toolbar button:hover {
+      box-shadow: 0 0 18px rgba(0,255,255,0.3);
+      border-color: #0ff;
+    }
+    body.dark-mode .toolbar button.active {
+      background: rgba(0,255,255,0.12);
+      border-color: #0ff;
+      color: #0ff;
+    }
+
+    .container {
+      background: var(--container-bg);
+      border-radius: 16px;
+      box-shadow: 0 16px 40px var(--shadow);
+      padding: 40px;
+      width: 100%;
+      max-width: 640px;
+      animation: fadeIn 0.6s ease-in-out;
+      transition: all 0.4s;
+    }
+    body.dark-mode .container {
+      box-shadow: 0 0 30px rgba(0,255,255,0.08), 0 0 60px rgba(255,0,255,0.05);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 18px;
+      padding: 12px;
+      border: 2px dashed var(--input-border);
+      border-radius: 12px;
+      position: relative;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .logo-section:hover {
+      border-color: var(--primary);
+      background: rgba(79, 70, 229, 0.03);
+    }
+    body.dark-mode .logo-section:hover {
+      border-color: #0ff;
+      background: rgba(0,255,255,0.04);
+    }
+    .logo-section img {
+      max-height: 72px;
+      max-width: 200px;
+      object-fit: contain;
+      border-radius: 6px;
+      transition: filter 0.3s;
+    }
+    body.dark-mode .logo-section img {
+      filter: drop-shadow(0 0 8px rgba(0,255,255,0.4));
+    }
+    .logo-section .logo-label {
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+    .logo-section .logo-label .change-hint {
+      color: var(--primary);
+      cursor: pointer;
+    }
+    body.dark-mode .logo-section .logo-label .change-hint {
+      color: #0ff;
+    }
+    .logo-section .reset-btn {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      background: var(--danger);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 12px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .logo-section.custom .reset-btn { display: flex; }
+
+    h1 {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      text-align: center;
+      color: var(--primary);
+      margin-bottom: 10px;
+      font-weight: 700;
+      transition: color 0.4s, text-shadow 0.4s;
+    }
+    body.dark-mode h1 {
+      text-shadow: 0 0 20px rgba(0,255,255,0.5), 0 0 40px rgba(0,255,255,0.2);
+    }
+
+    .badge {
+      display: block;
+      background: var(--badge-bg);
+      color: var(--badge-color);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      text-align: center;
+      transition: all 0.4s;
+    }
+    body.dark-mode .badge {
+      text-shadow: 0 0 6px rgba(0,255,255,0.4);
+    }
+
+    .chat-history {
+      height: 350px;
+      overflow-y: auto;
+      padding: 16px;
+      background: var(--chat-bg);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+      transition: background 0.4s;
+    }
+    body.dark-mode .chat-history {
+      border: 1px solid rgba(0,255,255,0.1);
+      box-shadow: inset 0 0 20px rgba(0,255,255,0.03);
+    }
+    body.dark-mode .chat-history::-webkit-scrollbar { width: 6px; }
+    body.dark-mode .chat-history::-webkit-scrollbar-track { background: transparent; }
+    body.dark-mode .chat-history::-webkit-scrollbar-thumb {
+      background: rgba(0,255,255,0.3);
+      border-radius: 3px;
+    }
+
+    .chat-message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.4;
+      animation: fadeIn 0.3s ease-in-out;
+      word-wrap: break-word;
+    }
+    .bot-message {
+      align-self: flex-start;
+      background: var(--bot-msg-bg);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      transition: all 0.4s;
+    }
+    body.dark-mode .bot-message {
+      border: 1px solid rgba(0,255,255,0.15);
+      box-shadow: 0 0 8px rgba(0,255,255,0.05);
+    }
+    .user-message {
+      align-self: flex-end;
+      background: var(--primary);
+      color: white;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+    }
+    body.dark-mode .user-message {
+      background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.15));
+      color: #e0e0ff;
+      border: 1px solid rgba(0,255,255,0.3);
+      box-shadow: 0 0 12px rgba(0,255,255,0.15);
+    }
+
+    .chat-input-area { display: flex; gap: 10px; }
+    .chat-input-area input[type="text"] {
+      flex: 1;
+      padding: 14px 18px;
+      border: 2px solid var(--input-border);
+      border-radius: 12px;
+      font-size: 16px;
+      background: var(--container-bg);
+      color: var(--text);
+      transition: all 0.3s ease;
+    }
+    .chat-input-area input[type="text"]:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+    }
+    body.dark-mode .chat-input-area input[type="text"]:focus {
+      box-shadow: 0 0 12px rgba(0,255,255,0.25);
+    }
+    .chat-input-area button {
+      width: auto;
+      padding: 14px 24px;
+      font-size: 16px;
+      background: linear-gradient(45deg, var(--primary), #6366f1);
+      border: none;
+      color: white;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+    body.dark-mode .chat-input-area button {
+      background: linear-gradient(135deg, rgba(0,255,255,0.25), rgba(255,0,255,0.2));
+      color: #0ff;
+      border: 1.5px solid rgba(0,255,255,0.4);
+    }
+    .chat-input-area button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(79, 70, 229, 0.25);
+    }
+    body.dark-mode .chat-input-area button:hover {
+      box-shadow: 0 0 20px rgba(0,255,255,0.35);
+    }
+    .chat-input-area button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-msg {
+      color: #ef4444;
+      text-align: center;
+      font-weight: 600;
+      margin: 20px 0;
+      padding: 12px;
+      background: #fef2f2;
+      border-radius: 8px;
+    }
+    body.dark-mode .error-msg {
+      background: rgba(255,49,49,0.1);
+      border: 1px solid rgba(255,49,49,0.3);
+    }
+
+    .success-section { text-align: center; margin-top: 20px; }
+    .success-section a {
+      color: var(--accent);
+      font-size: 18px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    body.dark-mode .success-section a {
+      text-shadow: 0 0 10px rgba(57,255,20,0.5);
+    }
+    .success-section a:hover { text-decoration: underline; }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    iframe {
+      width: 100%;
+      height: 480px;
+      border: none;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+    body.dark-mode iframe {
+      box-shadow: 0 0 20px rgba(0,255,255,0.1);
+      border: 1px solid rgba(0,255,255,0.15);
+    }
+
+    .footer {
+      margin-top: 50px;
+      text-align: center;
+      font-size: 15px;
+      color: #6b7280;
+      transition: color 0.4s;
+    }
+    .footer p:first-child {
+      font-weight: 700;
+      color: var(--primary);
+    }
+    body.dark-mode .footer { color: rgba(224,224,255,0.5); }
+    body.dark-mode .footer p:first-child {
+      text-shadow: 0 0 10px rgba(0,255,255,0.4);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 24px; }
+      h1 { font-size: 1.6rem; }
+      .toolbar { top: 8px; right: 8px; gap: 6px; }
+      .toolbar button { padding: 6px 10px; font-size: 12px; }
+    }
+  </style>
+  <script th:inline="javascript">
+    /*<![CDATA[*/
+    const placeholders = /*[[${placeholders}]]*/ [];
+    /*]]>*/
+    let currentIndex = 0;
+    let customLogoFile = null;
+
+    function initChat() {
+      if (placeholders && placeholders.length > 0) {
+        const chatContainer = document.getElementById('chat-container');
+        if (chatContainer) {
+          addBotMessage("Hi! 👋 I need some details to generate your assignment.");
+          setTimeout(askNextQuestion, 800);
+        }
+      }
+    }
+
+    function askNextQuestion() {
+      if (currentIndex < placeholders.length) {
+        addBotMessage("Please provide the " + placeholders[currentIndex] + ":");
+        document.getElementById('chat-input').focus();
+      } else {
+        addBotMessage("All done! Generating your PDF now... 🚀");
+        document.getElementById('chat-input').disabled = true;
+        document.querySelector('.chat-input-area button').disabled = true;
+        setTimeout(submitForm, 800);
+      }
+    }
+
+    function addBotMessage(text) {
+      const history = document.getElementById('chat-history');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-message bot-message';
+      msgDiv.textContent = text;
+      history.appendChild(msgDiv);
+      history.scrollTop = history.scrollHeight;
+    }
+
+    function addUserMessage(text) {
+      const history = document.getElementById('chat-history');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-message user-message';
+      msgDiv.textContent = text;
+      history.appendChild(msgDiv);
+      history.scrollTop = history.scrollHeight;
+    }
+
+    function sendMessage() {
+      const inputEl = document.getElementById('chat-input');
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      addUserMessage(text);
+      inputEl.value = '';
+
+      const hiddenInput = document.querySelector('input[name="' + placeholders[currentIndex] + '"]');
+      if (hiddenInput) hiddenInput.value = text;
+
+      currentIndex++;
+      setTimeout(askNextQuestion, 600);
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') sendMessage();
+    }
+
+    function submitForm() {
+      const form = document.getElementById('hidden-form');
+      if (customLogoFile) {
+        const dt = new DataTransfer();
+        dt.items.add(customLogoFile);
+        document.getElementById('hidden-logo-input').files = dt.files;
+      }
+      const borderCheckbox = document.getElementById('pdf-border-checkbox');
+      const borderHidden = document.getElementById('hidden-border-input');
+      if (borderCheckbox && borderHidden) {
+        borderHidden.value = borderCheckbox.checked ? 'true' : 'false';
+      }
+      form.submit();
+    }
+
+    /* Dark Mode */
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      localStorage.setItem('darkMode', isDark ? 'on' : 'off');
+      updateDarkBtn(isDark);
+    }
+    function updateDarkBtn(isDark) {
+      const btn = document.getElementById('dark-toggle');
+      if (btn) {
+        btn.textContent = isDark ? '☀️ Light' : '🌙 Neon';
+        if (isDark) btn.classList.add('active');
+        else btn.classList.remove('active');
+      }
+    }
+
+    /* Logo */
+    function triggerLogoUpload() {
+      document.getElementById('logo-file-input').click();
+    }
+    function handleLogoChange(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      customLogoFile = file;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('logo-preview').src = e.target.result;
+        document.getElementById('logo-section').classList.add('custom');
+        document.getElementById('logo-hint').innerHTML = 'Custom logo selected · <span class="change-hint" onclick="triggerLogoUpload()">change</span>';
+      };
+      reader.readAsDataURL(file);
+    }
+    function resetLogo() {
+      customLogoFile = null;
+      document.getElementById('logo-preview').src = '/static/default_logo.png';
+      document.getElementById('logo-section').classList.remove('custom');
+      document.getElementById('logo-hint').innerHTML = 'Default logo · <span class="change-hint" onclick="triggerLogoUpload()">click to change</span>';
+      document.getElementById('logo-file-input').value = '';
+    }
+
+    /* Init */
+    window.onload = function() {
+      if (localStorage.getItem('darkMode') === 'on') {
+        document.body.classList.add('dark-mode');
+        updateDarkBtn(true);
+      } else {
+        updateDarkBtn(false);
+      }
+      const borderCheckbox = document.getElementById('pdf-border-checkbox');
+      if (borderCheckbox) {
+        borderCheckbox.checked = localStorage.getItem('pdfBorder') === 'on';
+      }
+      initChat();
+    };
+  </script>
+</head>
+<body>
+
+  <div class="toolbar">
+    <button id="dark-toggle" onclick="toggleDarkMode()">🌙 Neon</button>
+  </div>
+
+  <div class="container">
+
+    <div id="logo-section" class="logo-section" onclick="triggerLogoUpload()">
+      <img id="logo-preview" src="/static/default_logo.png" alt="Logo for PDF" />
+      <button class="reset-btn" type="button" onclick="event.stopPropagation(); resetLogo();" title="Reset to default">✕</button>
+      <span id="logo-hint" class="logo-label">Default logo · <span class="change-hint">click to change</span></span>
+      <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="handleLogoChange(event)" />
+    </div>
+
+    <h1>&#128196; Create Your Assignment PDF</h1>
+    <span class="badge">&#9889; Powered by Java + Spring Boot</span>
+
+    <!-- Error message -->
+    <div th:if="${error}" class="error-msg" th:text="${error}"></div>
+
+    <!-- PDF ready: show download + preview -->
+    <div th:if="${pdfReady}" class="success-section">
+      <p><a href="/download" download>&#11015;&#65039; Download PDF</a></p>
+      <iframe src="/view-pdf"></iframe>
+      <a href="/" class="back-link">&larr; Generate Another</a>
+    </div>
+
+    <!-- Chat form (only when placeholders exist and PDF not yet generated) -->
+    <div th:if="${not #lists.isEmpty(placeholders) and !pdfReady}" id="chat-container">
+      <div id="chat-history" class="chat-history"></div>
+      <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Type your answer..." onkeypress="handleKeyPress(event)" />
+        <button type="button" onclick="sendMessage()">Send</button>
+      </div>
+      <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--chat-bg); border-radius: 10px; transition: all 0.3s;">
+        <input type="checkbox" id="pdf-border-checkbox" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;" onchange="localStorage.setItem('pdfBorder', this.checked ? 'on' : 'off')" />
+        <label for="pdf-border-checkbox" style="font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text); user-select: none;">🔲 Add border to PDF</label>
+      </div>
+      <form id="hidden-form" method="POST" action="/generate" enctype="multipart/form-data" style="display: none;">
+        <input th:each="ph : ${placeholders}" th:name="${ph}" type="hidden" />
+        <input type="file" id="hidden-logo-input" name="logoFile" />
+        <input type="hidden" id="hidden-border-input" name="addBorder" value="false" />
+      </form>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>CyberDeveloper Tech</p>
+    <p>bsilent@developer</p>
+  </div>
+
+</body>
+</html>
