@@ -25,6 +25,7 @@ Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__, static_folder="src/main/resources/static")
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5 MB upload limit
 
 
 # ──────────────────────────────────────────────
